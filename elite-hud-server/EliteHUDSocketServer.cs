@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Converters;
 using System.Threading;
+using System.Net.NetworkInformation;
 
 namespace elite_hud_server
 {
@@ -29,8 +30,17 @@ namespace elite_hud_server
         [JsonProperty("type")]
         public string Type;
 
+        [JsonProperty("mode", ItemConverterType = typeof(StringEnumConverter))]
+        public Mode Mode;
+
         [JsonProperty("keys", ItemConverterType = typeof(StringEnumConverter))]
         public Keys[] Keys;
+    }
+
+    public enum Mode
+    {
+        Simultaneous,
+        Sequential
     }
 
     public class EliteHUDSocketServer : EliteDangerousEventModule
@@ -38,6 +48,34 @@ namespace elite_hud_server
         bool isInitialized = false;
 
         public EliteHUDSocketServer(IEliteDangerousApi api) : base(api) { }
+
+        string GetLocalIPv4(NetworkInterfaceType _type)
+        {  // Checks your IP adress from the local network connected to a gateway. This to avoid issues with double network cards
+            string output = "";  // default output
+            foreach (NetworkInterface item in NetworkInterface.GetAllNetworkInterfaces()) // Iterate over each network interface
+            {  // Find the network interface which has been provided in the arguments, break the loop if found
+                if (item.NetworkInterfaceType == _type && item.OperationalStatus == OperationalStatus.Up)
+                {   // Fetch the properties of this adapter
+                    IPInterfaceProperties adapterProperties = item.GetIPProperties();
+                    // Check if the gateway adress exist, if not its most likley a virtual network or smth
+                    if (adapterProperties.GatewayAddresses.FirstOrDefault() != null)
+                    {   // Iterate over each available unicast adresses
+                        foreach (UnicastIPAddressInformation ip in adapterProperties.UnicastAddresses)
+                        {   // If the IP is a local IPv4 adress
+                            if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                            {   // we got a match!
+                                output = ip.Address.ToString();
+                                break;  // break the loop!!
+                            }
+                        }
+                    }
+                }
+                // Check if we got a result if so break this method
+                if (output != "") { break; }
+            }
+            // Return results
+            return output;
+        }
 
         void Init(LoadGameEvent e)
         {
@@ -47,7 +85,8 @@ namespace elite_hud_server
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
 
-            var server = new WebSocketServer("ws://192.168.0.20:8181");
+            string localIP = GetLocalIPv4(NetworkInterfaceType.Ethernet);
+            var server = new WebSocketServer($"ws://{localIP}:8181");
             server.Start(_socket =>
             {
                 _socket.OnOpen = () =>
@@ -95,15 +134,31 @@ namespace elite_hud_server
                 _socket.OnMessage = message =>
                 {
                     // process commands from socket
-                    // this is how it works - shortacutkeys doesnt...
-                    Keyboard.KeyDown(Keys.LControlKey);
-                    Keyboard.KeyDown(Keys.Insert);
-                    Thread.Sleep(300);
-                    Keyboard.KeyUp(Keys.Insert);
-                    Keyboard.KeyUp(Keys.LControlKey); // does not release the key
-                    //Console.WriteLine(message);
-                    //var command = JsonConvert.DeserializeObject<PressKeyCommand>(message);
-                    //Keyboard.ShortcutKeys(command.Keys, 50);
+                    var command = JsonConvert.DeserializeObject<PressKeyCommand>(message);
+                    switch (command.Mode)
+                    {
+                        case Mode.Simultaneous:
+                            foreach (Keys key in command.Keys)
+                            {
+                                Keyboard.KeyDown(key);
+                            }
+                            Thread.Sleep(50);
+                            foreach (Keys key in command.Keys.Reverse())
+                            {
+                                Keyboard.KeyUp(key);
+                            }
+                            break;
+                        case Mode.Sequential:
+                            foreach (Keys key in command.Keys)
+                            {
+                                Keyboard.KeyPress(key);
+                                Thread.Sleep(50);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    Console.WriteLine(message);
                     //socket.Send(message);
                 };
             });
