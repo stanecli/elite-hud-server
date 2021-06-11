@@ -112,22 +112,47 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Ship.Lights.OnChange += (sender, isOn) =>
+                    {
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_HEADLIGHTS",
+                            Data = isOn
+                        }));
+                    };
+
+                    EliteAPI.Ship.Hardpoints.OnChange += (sender, isOn) =>
+                    {
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_HARDPOINTS",
+                            Data = isOn
+                        }));
+                    };
+
+                    EliteAPI.Ship.SilentRunning.OnChange += (sender, isOn) =>
+                    {
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_SILENT_RUNNING",
+                            Data = isOn
+                        }));
+                    };
+
+                    EliteAPI.Ship.CargoScoop.OnChange += (sender, isOn) =>
+                    {
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_CARGO_SCOOP",
+                            Data = isOn
+                        }));
+                    };
+
+                    // TODO send an initializer with ALL parameters
                     _socket.Send(JsonConvert.SerializeObject(new SocketData()
                     {
                         Type = "EVT_LOAD_GAME",
                         Data = e
-                    }));
-
-                    _socket.Send(JsonConvert.SerializeObject(new SocketData()
-                    {
-                        Type = "EVT_LANDING_GEAR",
-                        Data = EliteAPI.Ship.Gear.Value
-                    }));
-
-                    _socket.Send(JsonConvert.SerializeObject(new SocketData()
-                    {
-                        Type = "EVT_NIGHTVISION",
-                        Data = EliteAPI.Ship.NightVision.Value
                     }));
                 };
                 _socket.OnClose = () => Console.WriteLine("Close!");
