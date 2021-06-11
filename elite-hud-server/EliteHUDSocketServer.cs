@@ -139,6 +139,15 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Ship.GuiFocus.OnChange += (sender, focus) =>
+                    {
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_GUI_FOCUS",
+                            Data = focus
+                        }));
+                    };
+
                     EliteAPI.Ship.CargoScoop.OnChange += (sender, isOn) =>
                     {
                         _socket.Send(JsonConvert.SerializeObject(new SocketData()
@@ -176,7 +185,7 @@ namespace elite_hud_server
                         case Mode.Sequential:
                             foreach (Keys key in command.Keys)
                             {
-                                Keyboard.KeyPress(key);
+                                Keyboard.KeyPress(key, 50);
                                 Thread.Sleep(50);
                             }
                             break;
