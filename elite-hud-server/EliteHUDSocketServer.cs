@@ -46,7 +46,7 @@ namespace elite_hud_server
     public class EliteHUDSocketServer : EliteDangerousEventModule
     {
         bool isInitialized = false;
-
+        List<IWebSocketConnection> sockets = new List<IWebSocketConnection>();
         public EliteHUDSocketServer(IEliteDangerousApi api) : base(api) { }
 
         string GetLocalIPv4(NetworkInterfaceType _type)
@@ -92,6 +92,7 @@ namespace elite_hud_server
                 _socket.OnOpen = () =>
                 {
                     Console.WriteLine("Open!");
+                    sockets.Add(_socket);
 
                     // Log to the logging system whenever we change our gear
                     EliteAPI.Ship.Gear.OnChange += (sender, isDeployed) =>
@@ -157,6 +158,56 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Ship.Supercruise.OnChange += (sender, engaged) =>
+                    {
+                        Console.WriteLine("EVT_SUPERCRUISE: " + engaged);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_SUPERCRUISE",
+                            Data = engaged
+                        }));
+                    };
+
+                    EliteAPI.Ship.FsdJump.OnChange += (sender, jumping) =>
+                    {
+                        Console.WriteLine("EVT_HYPERJUMP: " + jumping);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_HYPERJUMP",
+                            Data = jumping
+                        }));
+                    };
+
+                    EliteAPI.Ship.FsdCharging.OnChange += (sender, isCharging) =>
+                    {
+                        Console.WriteLine("EVT_FSD_CHARGING: " + isCharging);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_FSD_CHARGING",
+                            Data = isCharging
+                        }));
+                    };
+
+                    EliteAPI.Ship.FsdCooldown.OnChange += (sender, onCoolDown) =>
+                    {
+                        Console.WriteLine("EVT_FSD_COOLDOWN: " + onCoolDown);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_FSD_COOLDOWN",
+                            Data = onCoolDown
+                        }));
+                    };
+
+                    EliteAPI.Ship.MassLocked.OnChange += (sender, locked) =>
+                    {
+                        Console.WriteLine("EVT_MASS_LOCK: " + locked);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_MASS_LOCK",
+                            Data = locked
+                        }));
+                    };
+
                     // TODO send an initializer with ALL parameters
                     _socket.Send(JsonConvert.SerializeObject(new SocketData()
                     {
@@ -205,5 +256,34 @@ namespace elite_hud_server
             Init(e);
             Console.WriteLine(e.Commander);
         }
+
+        [EliteDangerousEvent]
+        public void OnLoadout(LoadoutEvent e)
+        {
+            Console.WriteLine("EVT_LOADOUT");
+            sockets.ForEach(socket => socket.Send(JsonConvert.SerializeObject(new SocketData()
+            {
+                Type = "EVT_LOADOUT",
+                Data = e
+            })));
+        }
+
+        //[EliteDangerousEvent]
+        //public void OnFsdJump(FsdJumpEvent e) // fired AFTER hyper jump
+        //{
+        //    Console.WriteLine(e);
+        //}
+
+        //[EliteDangerousEvent]
+        //public void OnFsdJump(StartJumpEvent e) // fired ON jump (SC and hyper)
+        //{
+        //    Console.WriteLine(e);
+        //}
+
+        //[EliteDangerousEvent]
+        //public void OnFsdJump(FsdTargetEvent e) // fired when targeting a system
+        //{
+        //    Console.WriteLine(e);
+        //}
     }
 }
