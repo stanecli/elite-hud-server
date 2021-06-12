@@ -214,6 +214,12 @@ namespace elite_hud_server
                         Type = "EVT_LOAD_GAME",
                         Data = e
                     }));
+
+                    _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                    {
+                        Type = "EVT_CARGO",
+                        Data = EliteAPI.Cargo
+                    }));
                 };
                 _socket.OnClose = () => Console.WriteLine("Close!");
                 _socket.OnMessage = message =>
