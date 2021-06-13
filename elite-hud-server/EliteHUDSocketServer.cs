@@ -290,6 +290,16 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Ship.AnalysisMode.OnChange += (sender, isOn) =>
+                    {
+                        Console.WriteLine("EVT_ANALYSIS_MODE: " + isOn);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_ANALYSIS_MODE",
+                            Data = isOn
+                        }));
+                    };
+
                     // TODO send an initializer with ALL parameters
                     _socket.Send(JsonConvert.SerializeObject(new SocketData()
                     {
@@ -321,6 +331,10 @@ namespace elite_hud_server
                                 Docked = EliteAPI.Ship.Docked.Value,
                                 Pips = EliteAPI.Ship.Pips.Value,
                                 LowFuel = EliteAPI.Ship.LowFuel.Value,
+                                InInterdiction = EliteAPI.Ship.InInterdiction.Value,
+                                Supercruise = EliteAPI.Ship.Supercruise.Value,
+                                Scooping = EliteAPI.Ship.Scooping.Value,
+                                Landed = EliteAPI.Ship.Landed.Value,
                             },
                         }
                     }));
