@@ -16,9 +16,62 @@ using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Converters;
 using System.Threading;
 using System.Net.NetworkInformation;
+using EliteAPI.Status.Ship;
+using EliteAPI.Status.Cargo.Abstractions;
+using EliteAPI.Status.Ship.Abstractions;
 
 namespace elite_hud_server
 {
+    public class ShipData
+    {
+        public ShipFlags Flags;
+        public bool InInterdiction;
+        public bool InMothership;
+        public bool InFighter;
+        public bool InSrv;
+        public bool AnalysisMode;
+        public bool NightVision;
+        public bool AltitudeFromAverageRadius;
+        public bool FsdJump;
+        public bool SrvHighBeam;
+        public ShipPips Pips;
+        public int FireGroup;
+        public ShipGuiFocus GuiFocus;
+        public ShipFuel Fuel;
+        public int Cargo;
+        public ShipLegalState LegalState;
+        public float Latitude;
+        public float Altitude;
+        public float Longitude;
+        public float Heading;
+        public bool InDanger;
+        public bool HasLatLong;
+        public bool Overheating;
+        public bool LowFuel;
+        public bool Available;
+        public bool Docked;
+        public bool Landed;
+        public bool Gear;
+        public bool Shields;
+        public bool Supercruise;
+        public bool FlightAssist;
+        public bool Hardpoints;
+        public bool Winging;
+        public string Body;
+        public bool Lights;
+        public bool SilentRunning;
+        public bool Scooping;
+        public bool SrvHandbreak;
+        public bool SrvTurrent;
+        public bool SrvNearShip;
+        public bool SrvDriveAssist;
+        public bool MassLocked;
+        public bool FsdCharging;
+        public bool FsdCooldown;
+        public bool CargoScoop;
+        public float BodyRadius;
+    }
+
     public class SocketData
     {
         public string Type;
@@ -37,6 +90,14 @@ namespace elite_hud_server
         public Keys[] Keys;
     }
 
+    public class InitializeData
+    {
+        public LoadGameEvent LoadGameData;
+        public LoadoutEvent Loadout;
+        public ICargo Cargo;
+        public ShipData Ship;
+    }
+
     public enum Mode
     {
         Simultaneous,
@@ -46,6 +107,7 @@ namespace elite_hud_server
     public class EliteHUDSocketServer : EliteDangerousEventModule
     {
         bool isInitialized = false;
+        LoadoutEvent lastLoadout;
         List<IWebSocketConnection> sockets = new List<IWebSocketConnection>();
         public EliteHUDSocketServer(IEliteDangerousApi api) : base(api) { }
 
@@ -218,17 +280,49 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Cargo.OnChange += (sender, args) =>
+                    {
+                        Console.WriteLine("EVT_CARGO: " + args);
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_CARGO",
+                            Data = EliteAPI.Cargo
+                        }));
+                    };
+
                     // TODO send an initializer with ALL parameters
                     _socket.Send(JsonConvert.SerializeObject(new SocketData()
                     {
-                        Type = "EVT_LOAD_GAME",
-                        Data = e
-                    }));
-
-                    _socket.Send(JsonConvert.SerializeObject(new SocketData()
-                    {
-                        Type = "EVT_CARGO",
-                        Data = EliteAPI.Cargo
+                        Type = "EVT_INITIALIZE",
+                        Data = new InitializeData()
+                        {
+                            Cargo = EliteAPI.Cargo,
+                            LoadGameData = e,
+                            Loadout = lastLoadout,
+                            Ship = new ShipData()
+                            {
+                                AnalysisMode = EliteAPI.Ship.AnalysisMode.Value,
+                                Gear = EliteAPI.Ship.Gear.Value,
+                                CargoScoop = EliteAPI.Ship.CargoScoop.Value,
+                                Hardpoints = EliteAPI.Ship.Hardpoints.Value,
+                                Lights = EliteAPI.Ship.Lights.Value,
+                                FlightAssist = EliteAPI.Ship.FlightAssist.Value,
+                                NightVision = EliteAPI.Ship.NightVision.Value,
+                                Flags = EliteAPI.Ship.Flags.Value,
+                                SilentRunning = EliteAPI.Ship.SilentRunning.Value,
+                                GuiFocus = EliteAPI.Ship.GuiFocus.Value,
+                                FsdCharging = EliteAPI.Ship.FsdCharging.Value,
+                                FsdCooldown = EliteAPI.Ship.FsdCooldown.Value,
+                                FsdJump = EliteAPI.Ship.FsdJump.Value,
+                                MassLocked = EliteAPI.Ship.MassLocked.Value,
+                                Shields = EliteAPI.Ship.Shields.Value,
+                                Overheating = EliteAPI.Ship.Overheating.Value,
+                                Fuel = EliteAPI.Ship.Fuel.Value,
+                                Docked = EliteAPI.Ship.Docked.Value,
+                                Pips = EliteAPI.Ship.Pips.Value,
+                                LowFuel = EliteAPI.Ship.LowFuel.Value,
+                            },
+                        }
                     }));
                 };
                 _socket.OnClose = () => Console.WriteLine("Close!");
@@ -260,7 +354,6 @@ namespace elite_hud_server
                             break;
                     }
                     Console.WriteLine(message);
-                    //socket.Send(message);
                 };
             });
             isInitialized = true;
@@ -277,6 +370,7 @@ namespace elite_hud_server
         public void OnLoadout(LoadoutEvent e)
         {
             Console.WriteLine("EVT_LOADOUT");
+            lastLoadout = e;
             sockets.ForEach(socket => socket.Send(JsonConvert.SerializeObject(new SocketData()
             {
                 Type = "EVT_LOADOUT",
