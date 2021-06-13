@@ -131,6 +131,16 @@ namespace elite_hud_server
                         }));
                     };
 
+                    EliteAPI.Ship.Flags.OnChange += (sender, flags) =>
+                    {
+                        Console.WriteLine("EVT_SHIPFLAGS: " + Convert.ToString(((int)flags), 2));
+                        _socket.Send(JsonConvert.SerializeObject(new SocketData()
+                        {
+                            Type = "EVT_SHIPFLAGS",
+                            Data = flags
+                        }));
+                    };
+
                     EliteAPI.Ship.SilentRunning.OnChange += (sender, isOn) =>
                     {
                         _socket.Send(JsonConvert.SerializeObject(new SocketData()
