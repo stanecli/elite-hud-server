@@ -6,7 +6,7 @@ Sends Elite events to connected clients.
 
 ## Installation
 
-Use one of the prebuilt executable from [this link](https://breakdance.github.io/breakdance/)
+Download and run [elite-hud-server.zip (v0.1.0)](https://github.com/stanecli/elite-hud-server/releases/download/v0.1.0/elite-hud-server.zip)
 
 OR
 
